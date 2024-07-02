@@ -1,0 +1,20 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "pyfunflow"
+version = "0.1.0"
+description = "Declarative workflows in Python"
+authors = ["Guillaume Desforges <guillaume.desforges.pro@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.0"
+pytest = "^8.2.2"
+pyright = "^1.1.369"
+
