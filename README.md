@@ -1,14 +1,20 @@
 # pyfunflow
 
-Declarative workflows in Python.
+Declarative composable typed workflows in Python.
 
 > [!WARNING]
-> This is a Proof of Concept, currently Work In Progress.
+> This is a proof of concept currently being worked on.
+> Do not use in production.
 
+> [!WARNING]
+> Please consider this a research project.
+> Its development may stop anytime without announcement or warning.
 
-## What are declarative workflows?
+## Why `pyfunflow`?
 
-In most workflow libraries, you write your program as a sequence of implementations.
+### Declarative
+
+In most workflow libraries, one writes their workflow as a sequence of _implementations_.
 For example in Airflow:
 
 ```python
@@ -34,7 +40,13 @@ with DAG(
     download_file_from_ftp(ftp_password)
 ```
 
-Using `pyfunflow`, you _declare_ a workflow:
+In the Airflow example above, getting the FTP password is both declared _and_ implemented by `get_ftp_password` at once.
+In order to pull the FTP password from somewhere else (e.g. a secret manager), we would need to change the workflow entirely,
+even though what we really care about in this workflow is the idea of fetching a secret not how.
+Airflow hard-codes the meaning of a task together with how to actually perform the task, leading to high coupling.
+This makes workflows harder to run in different environment, e.g. locally for testing.
+
+Using `pyfunflow`, you _declare_ a workflow regardless of its implementation:
 
 ```python
 # pyfunflow code
@@ -51,31 +63,47 @@ flow = SequenceFlow(
 )
 ```
 
-In this example, getting the FTP password in Airflow is both declared _and_ implemented by `get_ftp_password` at once.
-In order to pull the FTP password from somewhere else (e.g. a secret manager), we would need to change the workflow entirely,
-even though what we really care about in this workflow is the idea of fetching a secret not how.
-Airflow hard-codes the meaning of a task together with how to actually perform the task, leading to high coupling.
-This makes workflows harder to run in different environment, e.g. locally for testing.
-
-In `pyfunflow`, only the intent of the workflow is conveyed.
-The workflow can read the secret from an environment variable, a file or a secret manager, we don't care about it. 
-It will be up to the running environment to decide that!
-
 In `pyfunflow`, flows that compose a workflow are all "just data", without behavior attached (yet).
+Only the intent of the workflow is conveyed, not how that intent is fulfilled.
+When it runs, the workflow can read the secret from an environment variable, a file or a secret manager, we don't care about it (yet). 
+It will be up to the running environment to decide how each flow!
+
+### Composable
+
+In `pyfunflow` both tasks and workflows are "flows".
+It is possible to define two workflows separately, and put them together afterwards to make a more complex workflow.
+
+### Typed
+
+Both inputs and output a flow are typed, providing helpful editor features such as auto-completion, and validating the structure of your workflow.
+
+```python
+flow = SequenceFlow(
+    flows=[
+        (get_ftp_password := SecretFlow(name="ftp-password")),
+    ],
+    final_flow=FtpFlow(
+        host="ftp.example.com",
+        user="user",
+        # the transformed output of the previous flow is type-checked
+        password=get_ftp_password.output.map(lambda x: x["value"]),
+        path="/path/to/remote/file",
+    ),
+)
+```
 
 ## Usage
 
 Requirements:
 - Python 3.12+
 
-Install `pyfunflow`
+Install `pyfunflow`.
 
 ```sh
-# TODO: push to PyPI
-pip install pyfunflow
+pip install git+https://github.com/tweag/pyfunflow
 ```
 
-Instantiate a `Flow` from the pre-defined ones:
+Instantiate a `Flow` from the pre-defined ones.
 
 ```python
 # from ./examples/hello_world.py
@@ -94,6 +122,9 @@ You can also define your own types of `Flow`s and combine them together!
 Requirements:
 - Python 3.12+
 - `poetry`
+
+Clone this repository.
+Then install Python dependencies.
 
 ```sh
 poetry install
