@@ -9,6 +9,7 @@ from pyfunflow import (
     ResultStore,
     run_sequential_local,
 )
+from pyfunflow.batteries.control import interpret_sequence_flow
 
 
 flow = SequenceFlow(
@@ -82,6 +83,8 @@ def dispatcher[F](flow: F) -> Callable[[ResultStore, F], Any]:
         return cast(Callable[[ResultStore, F], Any], interpret_secret_flow)
     elif isinstance(flow, FtpFlow):
         return cast(Callable[[ResultStore, F], Any], interpret_ftp_flow)
+    if isinstance(flow, SequenceFlow):
+        return cast(Callable[[ResultStore, F], Any], interpret_sequence_flow)
     else:
         raise ValueError("No interpreter for flow: " + str(flow))
 

@@ -1,5 +1,5 @@
 from typing import Iterable
-from pyfunflow.core import Flow
+from pyfunflow.core import Flow, ResultStore
 
 
 class SequenceFlow[O](Flow[O]):
@@ -10,3 +10,8 @@ class SequenceFlow[O](Flow[O]):
     def __getsubflows__(self) -> Iterable[Flow]:
         for flow in self.flows:
             yield from flow.__getsubflows__()
+        yield self
+
+
+def interpret_sequence_flow(result_store: ResultStore, flow: SequenceFlow):
+    return result_store.get(flow.flows[-1])
