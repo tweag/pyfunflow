@@ -6,6 +6,12 @@ from dataclasses import dataclass
 
 
 @dataclass
+class Node:
+    id_: str
+    label: str
+
+
+@dataclass
 class Edge:
     downstream: str
     upstream: str
@@ -13,14 +19,19 @@ class Edge:
     label: str | None
 
 
+def _get_first_last_subflows(flow: Flow):
+    subflows = list(flow.__getsubflows__())
+    return subflows[0], subflows[-1]
+
+
 def _make_edges(flow: Flow):
-    nodes: list[str] = []
+    nodes: list[Node] = []
     edges: list[Edge] = []
 
     for subflow in flow.__getsubflows__():
         subflow_init = inspect.signature(subflow.__init__)
 
-        nodes.append(subflow.__class__.__name__)
+        nodes.append(Node(id_=str(id(subflow)), label=subflow.__class__.__name__))
 
         # link SequenceFlow flows
         if isinstance(subflow, SequenceFlow):
@@ -31,8 +42,8 @@ def _make_edges(flow: Flow):
                 if previous_last_subsubflow is not None:
                     edges.append(
                         Edge(
-                            downstream=previous_last_subsubflow.__class__.__name__,
-                            upstream=first_subsubflow.__class__.__name__,
+                            downstream=str(id(previous_last_subsubflow)),
+                            upstream=str(id(first_subsubflow)),
                             type_="sequence",
                             label=None,
                         )
@@ -41,8 +52,8 @@ def _make_edges(flow: Flow):
 
             edges.append(
                 Edge(
-                    downstream=subflow.flows[-1].__class__.__name__,
-                    upstream=subflow.__class__.__name__,
+                    downstream=str(id(subflow.flows[-1])),
+                    upstream=str(id(subflow)),
                     type_="sequence",
                     label=None,
                 )
@@ -50,34 +61,40 @@ def _make_edges(flow: Flow):
 
         # link BranchFlow flows
         if isinstance(subflow, BranchFlow):
+            flow_true_first, flow_true_last = _get_first_last_subflows(
+                subflow.flow_true
+            )
             edges.append(
                 Edge(
-                    downstream=subflow.condition.__class__.__name__,
-                    upstream=subflow.flow_true.__class__.__name__,
+                    downstream=str(id(subflow.condition)),
+                    upstream=str(id(flow_true_first)),
                     type_="branching",
                     label=None,
                 )
             )
             edges.append(
                 Edge(
-                    downstream=subflow.condition.__class__.__name__,
-                    upstream=subflow.flow_false.__class__.__name__,
+                    downstream=str(id(flow_true_last)),
+                    upstream=str(id(subflow)),
+                    type_="branching",
+                    label=None,
+                )
+            )
+            flow_false_first, flow_false_last = _get_first_last_subflows(
+                subflow.flow_false
+            )
+            edges.append(
+                Edge(
+                    downstream=str(id(subflow.condition)),
+                    upstream=str(id(flow_false_first)),
                     type_="branching",
                     label=None,
                 )
             )
             edges.append(
                 Edge(
-                    downstream=subflow.flow_true.__class__.__name__,
-                    upstream=subflow.__class__.__name__,
-                    type_="branching",
-                    label=None,
-                )
-            )
-            edges.append(
-                Edge(
-                    downstream=subflow.flow_false.__class__.__name__,
-                    upstream=subflow.__class__.__name__,
+                    downstream=str(id(flow_false_last)),
+                    upstream=str(id(subflow)),
                     type_="branching",
                     label=None,
                 )
@@ -94,8 +111,8 @@ def _make_edges(flow: Flow):
                 upstream = param.back
                 edges.append(
                     Edge(
-                        downstream=upstream.__class__.__name__,
-                        upstream=subflow.__class__.__name__,
+                        downstream=str(id(upstream)),
+                        upstream=str(id(subflow)),
                         type_="inputs",
                         label=init_param,
                     )
@@ -111,7 +128,7 @@ def make_dot(flow: Flow) -> str:
 
     builder.write("digraph G {\n")
     for node in nodes:
-        builder.write(f'"{node}"\n')
+        builder.write(f'"{node.id_}" [label="{node.label}"]\n')
 
     for edge in edges:
         label = f' [label="{edge.label}"]' if edge.label else None
