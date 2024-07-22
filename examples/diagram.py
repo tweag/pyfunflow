@@ -16,13 +16,13 @@ class IsEven(Flow[bool]):
 
 
 class Increment(Flow[int]):
-    def __init__(self, value: RefBack[int, int]):
+    def __init__(self, value: int | RefBack[int, int]):
         super().__init__(_output_type=int)
         self.value = value
 
 
 class Double(Flow[int]):
-    def __init__(self, value: RefBack[int, int]):
+    def __init__(self, value: int | RefBack[int, int]):
         super().__init__(_output_type=int)
         self.value = value
 
@@ -30,17 +30,20 @@ class Double(Flow[int]):
 flow = SequenceFlow(
     flows=[
         (constant := Constant(1)),
-    ],
-    final_flow=BranchFlow(
-        condition=IsEven(constant.output),
-        flow_false=Increment(constant.output),
-        flow_true=SequenceFlow(
-            flows=[
-                (double := Double(constant.output)),
-            ],
-            final_flow=Increment(double.output),
+        (
+            branching := BranchFlow(
+                condition=IsEven(constant.output),
+                flow_false=Increment(constant.output),
+                flow_true=SequenceFlow(
+                    flows=[
+                        (double := Double(constant.output)),
+                    ],
+                    final_flow=Increment(double.output),
+                ),
+            )
         ),
-    ),
+    ],
+    final_flow=Increment(branching.output),
 )
 
 dot_str = make_dot(flow)
