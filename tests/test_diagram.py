@@ -24,4 +24,14 @@ def test_make_dot():
 
     dot_str = make_dot(flow)
 
-    assert dot_str == 'digraph G {\n"A" -> "B"\n}'
+    assert (
+        dot_str
+        == """digraph G {
+"A"
+"B"
+"SequenceFlow"
+"A" -> "B" [label="a"]
+"A" -> "B" [style=dashed]
+"B" -> "SequenceFlow" [style=dashed]
+}"""
+    )
