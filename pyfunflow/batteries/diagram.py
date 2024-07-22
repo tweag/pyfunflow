@@ -1,6 +1,6 @@
 import inspect
 from io import StringIO
-from pyfunflow.batteries.control import SequenceFlow
+from pyfunflow.batteries.control import BranchFlow, SequenceFlow
 from pyfunflow.core import Flow, RefBack
 from dataclasses import dataclass
 
@@ -48,6 +48,41 @@ def _make_edges(flow: Flow):
                 )
             )
 
+        # link BranchFlow flows
+        if isinstance(subflow, BranchFlow):
+            edges.append(
+                Edge(
+                    downstream=subflow.condition.__class__.__name__,
+                    upstream=subflow.flow_true.__class__.__name__,
+                    type_="branching",
+                    label=None,
+                )
+            )
+            edges.append(
+                Edge(
+                    downstream=subflow.condition.__class__.__name__,
+                    upstream=subflow.flow_false.__class__.__name__,
+                    type_="branching",
+                    label=None,
+                )
+            )
+            edges.append(
+                Edge(
+                    downstream=subflow.flow_true.__class__.__name__,
+                    upstream=subflow.__class__.__name__,
+                    type_="branching",
+                    label=None,
+                )
+            )
+            edges.append(
+                Edge(
+                    downstream=subflow.flow_false.__class__.__name__,
+                    upstream=subflow.__class__.__name__,
+                    type_="branching",
+                    label=None,
+                )
+            )
+
         # link by inputs passed
         for init_param in subflow_init.parameters.keys():
             try:
@@ -80,7 +115,7 @@ def make_dot(flow: Flow) -> str:
 
     for edge in edges:
         label = f' [label="{edge.label}"]' if edge.label else None
-        style = " [style=dashed]" if edge.type_ == "sequence" else None
+        style = " [style=dashed]" if edge.type_ in ["sequence", "branching"] else None
         builder.write(
             f'"{edge.downstream}" -> "{edge.upstream}"{style or ""}{label or ""}\n'
         )
